@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Fisher Predict</string>
+    <string name="btn_start">▶ تشغيل التحليل</string>
+    <string name="btn_stop">⏹ إيقاف التحليل</string>
+    <string name="status_stopped">الحالة: متوقف</string>
+    <string name="status_running">الحالة: يعمل - افتح اللعبة الآن</string>
+    <string name="analysis_started">تم تشغيل التحليل</string>
+    <string name="analysis_stopped">تم إيقاف التحليل</string>
+    <string name="permission_required">يجب منح صلاحية العرض فوق التطبيقات</string>
+    <string name="notification_title">Fisher Predict</string>
+    <string name="notification_text">تحليل الأسماك نشط</string>
+    <string name="channel_name">Fish Overlay</string>
+    <string name="channel_description">قناة إشعارات تحليل الأسماك</string>
+    <string name="instruction_1">1. اضغط تشغيل التحليل</string>
+    <string name="instruction_2">2. امنح صلاحية العرض فوق التطبيقات</string>
+    <string name="instruction_3">3. افتح لعبة الصيد</string>
+    <string name="instruction_4">4. ستظهر علامات خضراء على الأسماك القابلة للصيد</string>
+</resources>
