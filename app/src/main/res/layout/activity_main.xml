@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1a1a2e">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp"
+        android:gravity="center">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🐟 Fisher Predict"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#00ff88"
+            android:gravity="center"
+            android:paddingTop="32dp"
+            android:paddingBottom="32dp" />
+
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/status_stopped"
+            android:textSize="16sp"
+            android:textColor="#FFFFFF"
+            android:gravity="center"
+            android:padding="16dp"
+            android:background="#1E2A3A"
+            android:layout_marginBottom="24dp" />
+
+        <Button
+            android:id="@+id/btnStart"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="@string/btn_start"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:background="#00c853"
+            android:layout_marginBottom="12dp" />
+
+        <Button
+            android:id="@+id/btnStop"
+            android:layout_width="match_parent"
+            android:layout_height="56dp"
+            android:text="@string/btn_stop"
+            android:textSize="18sp"
+            android:textColor="#FFFFFF"
+            android:background="#d32f2f"
+            android:enabled="false"
+            android:layout_marginBottom="32dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/instruction_1"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/instruction_2"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/instruction_3"
+            android:textSize="14sp"
+            android:textColor="#FFFFFF"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/instruction_4"
+            android:textSize="14sp"
+            android:textColor="#00ff88" />
+
+    </LinearLayout>
+</ScrollView>
