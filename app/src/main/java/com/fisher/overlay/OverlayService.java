@@ -1,5 +1,4 @@
 package com.fisher.overlay;
-
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -11,101 +10,62 @@ import android.os.Build;
 import android.os.IBinder;
 import android.view.Gravity;
 import android.view.WindowManager;
-
 public class OverlayService extends Service {
-
-    private static final String CHANNEL_ID     = "fish_overlay_channel";
-    private static final int    NOTIFICATION_ID = 1;
-
-    private WindowManager   windowManager;
-    private FishOverlayView overlayView;
-
-    @Override
-    public void onCreate() {
+    private static final String CHANNEL_ID="fish_ch";
+    private static final int NOTE_ID=1;
+    private WindowManager wm;
+    private FishOverlayView ov;
+    public void onCreate(){
         super.onCreate();
-        createNotificationChannel();
-        startForeground(NOTIFICATION_ID, createNotification());
-        setupOverlay();
+        createChannel();
+        startForeground(NOTE_ID,buildNote());
+        try{
+            wm=(WindowManager)getSystemService(Context.WINDOW_SERVICE);
+            ov=new FishOverlayView(this);
+            int type=Build.VERSION.SDK_INT>=Build.VERSION_CODES.O?
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:
+                WindowManager.LayoutParams.TYPE_PHONE;
+            WindowManager.LayoutParams p=new WindowManager.LayoutParams(
+                WindowManager.LayoutParams.MATCH_PARENT,
+                WindowManager.LayoutParams.MATCH_PARENT,
+                type,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|
+                WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE|
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                PixelFormat.TRANSLUCENT);
+            p.gravity=Gravity.TOP|Gravity.START;
+            wm.addView(ov,p);
+            ov.startUpdateLoop();
+        }catch(Exception e){
+            stopSelf();
+        }
     }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY;
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
-
-    @Override
-    public void onDestroy() {
+    public int onStartCommand(Intent i,int f,int s){return START_STICKY;}
+    public IBinder onBind(Intent i){return null;}
+    public void onDestroy(){
         super.onDestroy();
-        if (overlayView != null && windowManager != null) {
-            try {
-                windowManager.removeView(overlayView);
-            } catch (IllegalArgumentException e) {
-                // View not attached
-            }
-            overlayView = null;
+        try{if(ov!=null&&wm!=null)wm.removeView(ov);}catch(Exception e){}
+        ov=null;
+    }
+    private void createChannel(){
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O){
+            NotificationChannel c=new NotificationChannel(
+                CHANNEL_ID,"Fisher Predict",NotificationManager.IMPORTANCE_LOW);
+            ((NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE))
+                .createNotificationChannel(c);
         }
     }
-
-    private void setupOverlay() {
-        windowManager = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
-        overlayView   = new FishOverlayView(this);
-
-        int windowType;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            windowType = WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY;
-        } else {
-            windowType = WindowManager.LayoutParams.TYPE_PHONE;
-        }
-
-        WindowManager.LayoutParams params = new WindowManager.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.MATCH_PARENT,
-            windowType,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
-                | WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                | WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
-            PixelFormat.TRANSLUCENT
-        );
-        params.gravity = Gravity.TOP | Gravity.START;
-
-        windowManager.addView(overlayView, params);
-        overlayView.startUpdateLoop();
-    }
-
-    private void createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.channel_name),
-                NotificationManager.IMPORTANCE_LOW
-            );
-            channel.setDescription(getString(R.string.channel_description));
-            channel.setShowBadge(false);
-            NotificationManager manager =
-                (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
-            if (manager != null) {
-                manager.createNotificationChannel(channel);
-            }
-        }
-    }
-
-    private Notification createNotification() {
-        Notification.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder = new Notification.Builder(this, CHANNEL_ID);
-        } else {
-            builder = new Notification.Builder(this);
-        }
-        return builder
-            .setContentTitle(getString(R.string.notification_title))
-            .setContentText(getString(R.string.notification_text))
+    private Notification buildNote(){
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O)
+            return new Notification.Builder(this,CHANNEL_ID)
+                .setContentTitle("Fisher Predict")
+                .setContentText("يعمل")
+                .setSmallIcon(android.R.drawable.ic_menu_compass)
+                .setOngoing(true).build();
+        return new Notification.Builder(this)
+            .setContentTitle("Fisher Predict")
+            .setContentText("يعمل")
             .setSmallIcon(android.R.drawable.ic_menu_compass)
-            .setOngoing(true)
-            .build();
+            .setOngoing(true).build();
     }
 }
