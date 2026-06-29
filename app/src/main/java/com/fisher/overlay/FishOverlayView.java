@@ -3,95 +3,151 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.RectF;
 import android.os.Handler;
 import android.os.Looper;
 import android.view.View;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+
 public class FishOverlayView extends View {
-    private Paint paintGreen,paintRed,paintText;
-    private final List<TrackedFish> fish=new ArrayList<>();
-    private int sw,sh;
+    private Paint paintGreen,paintRed,paintText,paintBg,paintBar;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private boolean active=false;
-    private long lastUpdate=0,lastSpawn=0;
+    private int sw,sh;
+
+    // دورة اللعبة (ثوان)
+    private static final long CYCLE_MS=8000;
+    private long startTime=0;
+
+    // مراحل الدورة
+    // 0-20%: تحضير (أحمر)
+    // 20-60%: فرصة متوسطة (أصفر)
+    // 60-85%: فرصة ذهبية (أخضر) ← أفضل وقت
+    // 85-100%: انتهت (أحمر)
+
     private final Runnable loop=new Runnable(){
         public void run(){
             if(!active)return;
-            long now=System.currentTimeMillis();
-            float dt=(lastUpdate>0)?(now-lastUpdate):33;
-            lastUpdate=now;
-            Iterator<TrackedFish> it=fish.iterator();
-            while(it.hasNext()){
-                TrackedFish f=it.next();
-                f.update(sw,sh,dt);
-                if(f.isDead())it.remove();
-            }
-            if(now-lastSpawn>2000&&fish.size()<8){
-                if(sw>0&&sh>0)fish.add(new TrackedFish(sw,sh));
-                lastSpawn=now;
-            }
             invalidate();
-            handler.postDelayed(this,33);
+            handler.postDelayed(this,50);
         }
     };
+
     public FishOverlayView(Context c){
         super(c);
         paintGreen=new Paint(Paint.ANTI_ALIAS_FLAG);
-        paintGreen.setStyle(Paint.Style.STROKE);
         paintGreen.setColor(0xFF00FF88);
-        paintGreen.setStrokeWidth(5f);
+
         paintRed=new Paint(Paint.ANTI_ALIAS_FLAG);
-        paintRed.setStyle(Paint.Style.STROKE);
         paintRed.setColor(0xFFFF4444);
-        paintRed.setStrokeWidth(2.5f);
+
         paintText=new Paint(Paint.ANTI_ALIAS_FLAG);
         paintText.setColor(Color.WHITE);
-        paintText.setTextSize(30f);
-        paintText.setShadowLayer(4f,1f,1f,Color.BLACK);
+        paintText.setTextSize(42f);
+        paintText.setFakeBoldText(true);
+        paintText.setShadowLayer(6f,2f,2f,Color.BLACK);
+
+        paintBg=new Paint();
+        paintBg.setColor(0xCC000000);
+
+        paintBar=new Paint(Paint.ANTI_ALIAS_FLAG);
+        paintBar.setColor(0xFF00FF88);
     }
+
     protected void onSizeChanged(int w,int h,int ow,int oh){
         super.onSizeChanged(w,h,ow,oh);
-        sw=w;sh=h;
+        sw=w; sh=h;
     }
+
     public void startUpdateLoop(){
         if(active)return;
         active=true;
-        lastUpdate=System.currentTimeMillis();
-        lastSpawn=System.currentTimeMillis();
-        for(int i=0;i<3;i++)if(sw>0&&sh>0)fish.add(new TrackedFish(sw,sh));
+        startTime=System.currentTimeMillis();
         handler.post(loop);
     }
+
     public void stopUpdateLoop(){
         active=false;
         handler.removeCallbacks(loop);
-        fish.clear();
     }
+
     protected void onDraw(Canvas canvas){
         super.onDraw(canvas);
-        int catchable=0;
-        for(TrackedFish f:fish){
-            Paint p=f.isCatchable?paintGreen:paintRed;
-            p.setColor(f.getPaintColor());
-            p.setAlpha(f.isCatchable?220:130);
-            canvas.drawCircle(f.x,f.y,f.radius,p);
-            paintText.setTextSize(26f);
-            paintText.setColor(f.isCatchable?0xFF00FF88:0xFFFF6666);
-            String label=f.isCatchable?"✓ "+f.name:f.name;
-            float tw=paintText.measureText(label);
-            canvas.drawText(label,f.x-tw/2f,f.y-f.radius-10f,paintText);
-            if(f.isCatchable)catchable++;
+        if(sw==0||sh==0)return;
+
+        long now=System.currentTimeMillis();
+        long elapsed=(now-startTime)%CYCLE_MS;
+        float progress=(float)elapsed/CYCLE_MS; // 0.0 -> 1.0
+
+        // تحديد المرحلة
+        String label;
+        int color;
+        String advice;
+
+        if(progress<0.20f){
+            label="⏳ انتظر...";
+            color=0xFFFF4444;
+            advice="الأسماك تتجمع";
+        }else if(progress<0.60f){
+            label="🟡 فرصة متوسطة";
+            color=0xFFFFAA00;
+            advice="يمكنك المحاولة";
+        }else if(progress<0.85f){
+            label="✅ اضغط الآن!";
+            color=0xFF00FF88;
+            advice="أفضل وقت للصيد!";
+        }else{
+            label="❌ فاتك الوقت";
+            color=0xFFFF4444;
+            advice="انتظر الدورة القادمة";
         }
-        paintText.setTextSize(28f);
+
+        // خلفية شريط الوقت (أسفل الشاشة)
+        float barH=120f;
+        float barY=sh-barH-40f;
+        canvas.drawRect(20f,barY,sw-20f,barY+barH,paintBg);
+
+        // شريط التقدم
+        paintBar.setColor(color);
+        float barWidth=(sw-60f)*progress;
+        canvas.drawRect(30f,barY+10f,30f+barWidth,barY+barH-10f,paintBar);
+
+        // نص الحالة
+        paintText.setColor(color);
+        paintText.setTextSize(44f);
+        float tw=paintText.measureText(label);
+        canvas.drawText(label,(sw-tw)/2f,barY-20f,paintText);
+
+        // نص النصيحة
         paintText.setColor(Color.WHITE);
-        String info="اسماك: "+fish.size()+" | قابلة: "+catchable;
-        float tw=paintText.measureText(info);
-        Paint bg=new Paint();
-        bg.setColor(0xAA000000);
-        canvas.drawRect(sw/2f-tw/2f-10f,5f,sw/2f+tw/2f+10f,55f,bg);
-        canvas.drawText(info,sw/2f-tw/2f,45f,paintText);
+        paintText.setTextSize(32f);
+        float aw=paintText.measureText(advice);
+        canvas.drawRect((sw-aw)/2f-16f,barY+barH+10f,
+            (sw+aw)/2f+16f,barY+barH+60f,paintBg);
+        canvas.drawText(advice,(sw-aw)/2f,barY+barH+50f,paintText);
+
+        // مؤشر دائري في المنتصف
+        if(progress>=0.60f&&progress<0.85f){
+            paintGreen.setStyle(Paint.Style.STROKE);
+            paintGreen.setStrokeWidth(8f);
+            float pulse=(float)Math.sin((now%500)/500.0*Math.PI*2)*20f;
+            canvas.drawCircle(sw/2f,sh/2f,80f+pulse,paintGreen);
+            paintText.setColor(0xFF00FF88);
+            paintText.setTextSize(38f);
+            String s="اضغط!";
+            float sw2=paintText.measureText(s);
+            canvas.drawText(s,(sw-sw2)/2f,sh/2f+14f,paintText);
+        }
+
+        // عداد الدورة
+        long remaining=(long)(CYCLE_MS*(1f-progress)/1000f);
+        paintText.setColor(0xFFAAAAAA);
+        paintText.setTextSize(26f);
+        String timer="دورة جديدة بعد: "+remaining+"ث";
+        float ttw=paintText.measureText(timer);
+        canvas.drawRect((sw-ttw)/2f-10f,30f,(sw+ttw)/2f+10f,75f,paintBg);
+        canvas.drawText(timer,(sw-ttw)/2f,65f,paintText);
     }
+
     protected void onDetachedFromWindow(){
         super.onDetachedFromWindow();
         stopUpdateLoop();
