@@ -14,7 +14,8 @@ public class MainActivity extends Activity {
     private static final int REQ=1001;
     private Button btnStart,btnStop;
     private TextView tvStatus;
-    private boolean running=false;
+    private static FishOverlayView overlayView;
+    private static android.view.WindowManager wm;
     protected void onCreate(Bundle b){
         super.onCreate(b);
         setContentView(R.layout.activity_main);
@@ -27,29 +28,20 @@ public class MainActivity extends Activity {
                    !Settings.canDrawOverlays(MainActivity.this)){
                     new AlertDialog.Builder(MainActivity.this)
                         .setTitle("صلاحية مطلوبة")
-                        .setMessage("اضغط السماح ثم فعّل الخيار")
-                        .setPositiveButton("فتح الإعدادات",(d,w)->{
-                            Intent i=new Intent(
+                        .setMessage("اضغط السماح لتفعيل العرض فوق التطبيقات")
+                        .setPositiveButton("فتح الإعدادات",(d,w2)->{
+                            startActivityForResult(new Intent(
                                 Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                                Uri.parse("package:"+getPackageName()));
-                            startActivityForResult(i,REQ);
+                                Uri.parse("package:"+getPackageName())),REQ);
                         })
-                        .setNegativeButton("إلغاء",null)
-                        .show();
+                        .setNegativeButton("إلغاء",null).show();
                 }else{
-                    startApp();
+                    startOverlay();
                 }
             }
         });
         btnStop.setOnClickListener(new View.OnClickListener(){
-            public void onClick(View v){
-                running=false;
-                stopService(new Intent(MainActivity.this,OverlayService.class));
-                tvStatus.setText(getString(R.string.status_stopped));
-                tvStatus.setTextColor(0xFFAAAAAA);
-                btnStart.setEnabled(true);
-                btnStop.setEnabled(false);
-            }
+            public void onClick(View v){ stopOverlay(); }
         });
         updateUI();
     }
@@ -61,37 +53,58 @@ public class MainActivity extends Activity {
         super.onActivityResult(req,res,data);
         if(req==REQ){
             if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M&&
-               Settings.canDrawOverlays(this)){
-                startApp();
-            }else{
-                Toast.makeText(this,"لم يتم منح الصلاحية",Toast.LENGTH_LONG).show();
-            }
+               Settings.canDrawOverlays(this)) startOverlay();
+            else Toast.makeText(this,"لم يتم منح الصلاحية",Toast.LENGTH_LONG).show();
         }
     }
-    private void startApp(){
-        running=true;
-        Intent i=new Intent(this,OverlayService.class);
-        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O)
-            startForegroundService(i);
-        else
-            startService(i);
-        tvStatus.setText(getString(R.string.status_running));
-        tvStatus.setTextColor(0xFF00FF88);
-        btnStart.setEnabled(false);
-        btnStop.setEnabled(true);
-        Toast.makeText(this,getString(R.string.analysis_started),Toast.LENGTH_SHORT).show();
+    private void startOverlay(){
+        try{
+            if(overlayView!=null) return;
+            wm=(android.view.WindowManager)getSystemService(WINDOW_SERVICE);
+            overlayView=new FishOverlayView(getApplicationContext());
+            int type=Build.VERSION.SDK_INT>=Build.VERSION_CODES.O?
+                android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY:
+                android.view.WindowManager.LayoutParams.TYPE_PHONE;
+            android.view.WindowManager.LayoutParams p=
+                new android.view.WindowManager.LayoutParams(
+                    android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                    android.view.WindowManager.LayoutParams.MATCH_PARENT,
+                    type,
+                    android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE|
+                    android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE|
+                    android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    android.graphics.PixelFormat.TRANSLUCENT);
+            wm.addView(overlayView,p);
+            overlayView.startUpdateLoop();
+            tvStatus.setText(getString(R.string.status_running));
+            tvStatus.setTextColor(0xFF00FF88);
+            btnStart.setEnabled(false);
+            btnStop.setEnabled(true);
+            Toast.makeText(this,getString(R.string.analysis_started),Toast.LENGTH_SHORT).show();
+        }catch(Exception e){
+            Toast.makeText(this,"خطأ: "+e.getMessage(),Toast.LENGTH_LONG).show();
+        }
+    }
+    private void stopOverlay(){
+        try{
+            if(overlayView!=null&&wm!=null) wm.removeView(overlayView);
+        }catch(Exception e){}
+        overlayView=null;
+        tvStatus.setText(getString(R.string.status_stopped));
+        tvStatus.setTextColor(0xFFAAAAAA);
+        btnStart.setEnabled(true);
+        btnStop.setEnabled(false);
     }
     private void updateUI(){
         boolean hasPerm=Build.VERSION.SDK_INT<Build.VERSION_CODES.M||
                         Settings.canDrawOverlays(this);
-        if(running){
+        if(overlayView!=null){
             tvStatus.setText(getString(R.string.status_running));
             tvStatus.setTextColor(0xFF00FF88);
             btnStart.setEnabled(false);
             btnStop.setEnabled(true);
         }else{
-            tvStatus.setText(hasPerm?getString(R.string.status_stopped):
-                "⚠ يجب منح صلاحية العرض");
+            tvStatus.setText(hasPerm?getString(R.string.status_stopped):"⚠ يجب منح صلاحية العرض");
             tvStatus.setTextColor(hasPerm?0xFFAAAAAA:0xFFFF6600);
             btnStart.setEnabled(true);
             btnStop.setEnabled(false);
